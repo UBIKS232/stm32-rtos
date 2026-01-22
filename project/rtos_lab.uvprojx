@@ -173,7 +173,7 @@
             <AdsLven>1</AdsLven>
             <AdsLsxf>1</AdsLsxf>
             <RvctClst>1</RvctClst>
-            <GenPPlst>1</GenPPlst>
+            <GenPPlst>0</GenPPlst>
             <AdsCpuType>"Cortex-M3"</AdsCpuType>
             <RvctDeviceName></RvctDeviceName>
             <mOS>0</mOS>
@@ -336,7 +336,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_MD,__CC_ARM,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\user;.\bootloader;.\interrupt_config;.\standard_peripheral_driver\inc;.\standard_peripheral_driver\src</IncludePath>
+              <IncludePath>..\user;.\bootloader;.\interrupt_config;.\standard_peripheral_driver\inc;.\standard_peripheral_driver\src;..\rtos\source;..\rtos\source\include;..\rtos\source\portable\RVDS\ARM_CM3</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -697,6 +697,28 @@
         </Group>
         <Group>
           <GroupName>rtos/sources</GroupName>
+          <Files>
+            <File>
+              <FileName>list.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\rtos\source\list.c</FilePath>
+            </File>
+            <File>
+              <FileName>list.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\rtos\source\list.h</FilePath>
+            </File>
+            <File>
+              <FileName>rtos_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\rtos\source\rtos_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>portmacro.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\rtos\source\portmacro.h</FilePath>
+            </File>
+          </Files>
         </Group>
       </Groups>
     </Target>
