@@ -1,0 +1,5 @@
+.vscode/
+*.uvguix.*
+project/DebugConfig
+project/Listings
+project/Objects
