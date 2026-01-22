@@ -1,5 +1,7 @@
-.vscode/
+# .vscode/
 *.uvguix.*
 project/DebugConfig
 project/Listings
 project/Objects
+project/!official_tutorial
+# project/build
