@@ -5,10 +5,12 @@
 #include "stddef.h"
 #include "rtos_config.h"
 
+// "??"为带有疑问的语句
+
 // object oriented
-#define OO(name)                \
-    typedef struct name name ## _t; \
-    struct name
+// #define OO(name)                  \
+//     typedef struct name name##_t; \
+//     struct name
 
 #define portCHAR char
 #define portFLOAT float

@@ -1,4 +1,4 @@
-# .vscode/
+.vscode/
 *.uvguix.*
 project/DebugConfig
 project/Listings
