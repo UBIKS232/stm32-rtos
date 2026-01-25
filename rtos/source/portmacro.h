@@ -19,12 +19,11 @@
 #define portSHORT short
 
 #define portSTACK_TYPE uint32_t
-
-#define portBASE_TYPE long
-
 typedef portSTACK_TYPE StackType_t;
 
+#define portBASE_TYPE long
 typedef long BaseType_t;
+
 typedef unsigned long UBaseType_t;
 
 #if (configUSE_16_BIT_TICKS == 1)
