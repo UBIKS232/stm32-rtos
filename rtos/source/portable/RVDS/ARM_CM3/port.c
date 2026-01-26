@@ -9,7 +9,7 @@
 /**
  * @brief 异常发生之后, 任务函数最终进入的函数
  */
-static void prvtaskExitError(void)
+static void prvTaskExitError(void)
 {
 
     for (;;)
@@ -45,7 +45,7 @@ StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
     pxTopOfStack--;
     // R14(LR) 任务的异常返回地址, 通常任务是不会返回的,
     // 如果返回了就跳转到 prvTaskExitError, 该函数是一个无限循环
-    *pxTopOfStack = (StackType_t)prvtaskExitError;
+    *pxTopOfStack = (StackType_t)prvTaskExitError;
     // R12, R3, R2 and R1 默认初始化为 0
     pxTopOfStack -= 5;
     // R0
@@ -222,7 +222,7 @@ __asm void xPortPendSVHandler(void)
     str r0, [r2] /* 将 r0 的值存储到上一个任务的栈顶指针 pxTopOfStack */
     /* 上文保存完成 */
 
-    stmdb sp!, {r3, r14} /* 将 R3 和 R14(在整个系统中, 中断使用的是主堆栈, 栈指针使用的是 MSP) 临时压入堆栈, 入栈保护 */
+    stmdb sp!, {r3, r14} /* 将 R3 和 R14(在整个系统中, 中断使用的是主堆栈, 栈指针使用的是 MSP) 临时压入主堆栈, 入栈保护 */
 
     mov r0, #configMAX_SYSCALL_INTERRUPT_PRIORITY
     msr basepri, r0 /* 关中断, 进入临界段, 因为接下来要更新全局指针 pxCurrentTCB的值 */
@@ -270,7 +270,7 @@ BaseType_t xPortStartScheduler(void)
 {
     // 配置 PendSV 和 SysTick 的中断优先级为最低,
     // SysTick 和 PendSV 都会涉及到系统调度, 系统调度的优先级要低于系统的其它硬件中断优先级,
-    // 即优先相应系统中的外部硬件中断
+    // 即优先响应系统中的外部硬件中断
     portNVIC_SYSPRI2_REG |= portNVIC_SYSTICK_PRI;
     portNVIC_SYSPRI2_REG |= portNVIC_PENDSV_PRI;
 

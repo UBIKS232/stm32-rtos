@@ -700,6 +700,11 @@
               <FileType>5</FileType>
               <FilePath>..\rtos\source\portable\RVDS\ARM_CM3\portmacro.h</FilePath>
             </File>
+            <File>
+              <FileName>port.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\rtos\source\portable\RVDS\ARM_CM3\port.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -719,6 +724,16 @@
               <FileName>rtos_config.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\rtos\source\include\rtos_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>projectdefs.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\rtos\source\include\projectdefs.h</FilePath>
+            </File>
+            <File>
+              <FileName>task.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\rtos\source\include\task.h</FilePath>
             </File>
           </Files>
         </Group>
