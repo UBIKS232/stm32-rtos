@@ -2,6 +2,7 @@
 #define _TASK_H_
 
 #include "portmacro.h"
+#include "rtos.h"
 
 typedef void *TaskHandle_t;
 
@@ -19,5 +20,9 @@ TaskHandle_t xTaskCreateStatic(TaskFuntion_t pxTaskCode,
 #endif
 
 void vTaskStartScheduler(void);
+
+#define taskYIELD() portYIELD()
+
+void vTaskSwitchContext(void);
 
 #endif // _TASK_H_

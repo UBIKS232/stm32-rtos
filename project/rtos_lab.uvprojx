@@ -398,7 +398,42 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>lib/include</GroupName>
+          <GroupName>bootloader</GroupName>
+          <Files>
+            <File>
+              <FileName>core_cm3.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\bootloader\core_cm3.c</FilePath>
+            </File>
+            <File>
+              <FileName>core_cm3.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\bootloader\core_cm3.h</FilePath>
+            </File>
+            <File>
+              <FileName>startup_stm32f10x_md.s</FileName>
+              <FileType>2</FileType>
+              <FilePath>.\bootloader\startup_stm32f10x_md.s</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f10x.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\bootloader\stm32f10x.h</FilePath>
+            </File>
+            <File>
+              <FileName>system_stm32f10x.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\bootloader\system_stm32f10x.c</FilePath>
+            </File>
+            <File>
+              <FileName>system_stm32f10x.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\bootloader\system_stm32f10x.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>std_periph_lib/include</GroupName>
           <Files>
             <File>
               <FileName>misc.h</FileName>
@@ -518,7 +553,7 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>lib/sources</GroupName>
+          <GroupName>std_periph_lib/sources</GroupName>
           <Files>
             <File>
               <FileName>misc.c</FileName>
@@ -638,7 +673,7 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>lib/intconfig</GroupName>
+          <GroupName>std_periph_lib/intconfig</GroupName>
           <Files>
             <File>
               <FileName>stm32f10x_conf.h</FileName>
@@ -658,42 +693,34 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>lib/bootloader</GroupName>
+          <GroupName>rtos/ports</GroupName>
           <Files>
             <File>
-              <FileName>core_cm3.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\bootloader\core_cm3.c</FilePath>
-            </File>
-            <File>
-              <FileName>core_cm3.h</FileName>
+              <FileName>portmacro.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\bootloader\core_cm3.h</FilePath>
-            </File>
-            <File>
-              <FileName>startup_stm32f10x_md.s</FileName>
-              <FileType>2</FileType>
-              <FilePath>.\bootloader\startup_stm32f10x_md.s</FilePath>
-            </File>
-            <File>
-              <FileName>stm32f10x.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\bootloader\stm32f10x.h</FilePath>
-            </File>
-            <File>
-              <FileName>system_stm32f10x.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\bootloader\system_stm32f10x.c</FilePath>
-            </File>
-            <File>
-              <FileName>system_stm32f10x.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\bootloader\system_stm32f10x.h</FilePath>
+              <FilePath>..\rtos\source\portable\RVDS\ARM_CM3\portmacro.h</FilePath>
             </File>
           </Files>
         </Group>
         <Group>
-          <GroupName>rtos/ports</GroupName>
+          <GroupName>rtos/include</GroupName>
+          <Files>
+            <File>
+              <FileName>list.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\rtos\source\include\list.h</FilePath>
+            </File>
+            <File>
+              <FileName>rtos.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\rtos\source\include\rtos.h</FilePath>
+            </File>
+            <File>
+              <FileName>rtos_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\rtos\source\include\rtos_config.h</FilePath>
+            </File>
+          </Files>
         </Group>
         <Group>
           <GroupName>rtos/sources</GroupName>
@@ -704,19 +731,9 @@
               <FilePath>..\rtos\source\list.c</FilePath>
             </File>
             <File>
-              <FileName>list.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\rtos\source\list.h</FilePath>
-            </File>
-            <File>
-              <FileName>rtos_config.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\rtos\source\rtos_config.h</FilePath>
-            </File>
-            <File>
-              <FileName>portmacro.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\rtos\source\portmacro.h</FilePath>
+              <FileName>task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\rtos\source\task.c</FilePath>
             </File>
           </Files>
         </Group>

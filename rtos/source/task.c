@@ -130,16 +130,29 @@ TaskHandle_t xTaskCreateStatic(TaskFuntion_t pxTaskCode,
 
 TCB_t *pxCurrentTCB = NULL;
 extern TCB_t Task1TCB;
+extern TCB_t Task2TCB;
 
 /**
  * @brief 调度器启动
  */
-void vTaskStartScheduler(void){
+void vTaskStartScheduler(void)
+{
     // 目前不支持按优先级调度, 先指定一个最先运行的任务
     pxCurrentTCB = &Task1TCB;
 
-    if(xPortStartScheduler() != pdFALSE){
+    if (xPortStartScheduler() != pdFALSE)
+    {
         // 如果调度器启动成功, 不会进入这个 if 块
     }
 }
 
+/**
+ * @brief 上下文切换, 更新pxCurrentTCB
+ */
+void vTaskSwitchContext(void)
+{
+    if (pxCurrentTCB == &Task1TCB)
+        pxCurrentTCB = &Task2TCB;
+    else
+        pxCurrentTCB = &Task1TCB;
+}

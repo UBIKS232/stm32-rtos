@@ -3,6 +3,7 @@
 
 #include "stdint.h"
 #include "stddef.h"
+#include "projectdefs.h"
 #include "rtos_config.h"
 
 // "??"为带有疑问的语句
@@ -35,9 +36,22 @@ typedef uint32_t TickType_t;
 #define portMAX_DELAY (TickType_t)0xffffffffUL
 #endif
 
-StackType_t pxPortInitialiseStack(StackType_t *pxTopOfStack,
+StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
                                   TaskFuntion_t pxCode,
                                   void *pvParameters);
 BaseType_t xPortStartScheduler(void);
+
+#define portNVIC_INT_CTRL_REG (*((volatile uint32_t *)0xE000ED04))
+#define portNVIC_PENDSVSET_BIT (1UL << 28UL)
+#define portSY_FULL_READ_WRITE (15)
+
+// 将 PendSV 的悬起位置 1, 当没有其它中断运行的时候响应 PendSV 中断, 去执行写好的 PendSV断服务函数, 在里面实现任务切换
+#define portYIELD()                                     \
+    {                                                   \
+        /* 触发PendSV, 产生上下文切换 */                \
+        portNVIC_INT_CTRL_REG = portNVIC_PENDSVSET_BIT; \
+        __dsb(portSY_FULL_READ_WRITE);                  \
+        __isb(portSY_FULL_READ_WRITE);                  \
+    }
 
 #endif // _PORTMACRO_H_

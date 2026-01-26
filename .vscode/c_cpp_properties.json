@@ -20,19 +20,7 @@
             "defines": [
                 "STM32F10X_MD",
                 "__CC_ARM",
-                "USE_STDPERIPH_DRIVER",
-                // "__asm=",
-                "PRESERVE8",
-                "ldr=",
-                "msr=",
-                "msp=",
-                "cpsie=",
-                "dsb=",
-                "isb=",
-                "svc=",
-                "nop=;",
-                "r0=",
-                
+                "USE_STDPERIPH_DRIVER"
             ],
             "intelliSenseMode": "windows-msvc-arm"
         }

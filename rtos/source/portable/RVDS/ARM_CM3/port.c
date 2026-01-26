@@ -1,5 +1,7 @@
 #include "portmacro.h"
 #include "projectdefs.h"
+#include "rtos_config.h"
+#include "task.h"
 
 #define portINITIAL_XPSR (0x01000000L)
 #define portSTART_ADDRESS_MASK ((StackType_t)0xfffffffeUL)
@@ -21,7 +23,7 @@ static void prvtaskExitError(void)
  * @param void *pvParameters: 任务形参
  * @returns StackType_t pxTopOfStack: 此时 pxTopOfStack 指向空闲栈
  */
-StackType_t pxPortInitialiseStack(StackType_t *pxTopOfStack,
+StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
                                   TaskFuntion_t pxCode,
                                   void *pvParameters)
 {
@@ -61,7 +63,7 @@ StackType_t pxPortInitialiseStack(StackType_t *pxTopOfStack,
  * @brief 1. 更新 MSP 的值,
  * @brief 2. 产生 SVC 系统调用, 然后去到 SVC 的中断服务函数里面真正切换到第一个任务
  */
-static void prvStartFirstTask(void)
+__asm static void prvStartFirstTask(void)
 {
     // ARM Cortex-M3 TRM:
     // ARM Cortex-M System Control Space (SCS) Register Map
@@ -151,38 +153,22 @@ static void prvStartFirstTask(void)
     //      the vector table start address to a different memory location,
     //      in the range 0x00000080 to 0x3FFFFF80,
     //      see Vector table offset register (SCB_VTOR) on page 133.
-    __asm volatile(
-        /* 当前栈需按照 8 字节对齐 */
-        "PRESERVE8\n"
-        /*
-         * 在Cortex-M 中, 0xE000ED08 是 SCB_VTOR 寄存器的地址,
-         * 里面存放的是向量表的起始地址, 即 MSP 的地址.
-         * 向量表通常是从内部 FLASH 的起始地址开始存放,
-         * 那么可知 memory：0x00000000 处存放的就是 MSP 的值.
-         * 这个可以通过仿真时查看内存的值证实.
-         */
-        /* 将 0xE000ED08 这个立即数加载到寄存器 R0 */
-        "ldr r0, =0xE000ED08\n"
-        /*
-         * 将 0xE000ED08 这个地址指向的内容加载到寄存器 R0,
-         * 此时 R0 等于 SCB_VTOR 寄存器的值, 等于 0x00000000,
-         * 即 memory 的起始地址
-         */
-        "ldr r0, [r0]\n"
-        /* 将 0x00000000 这个地址指向的内容加载到 R0 */
-        "ldr r0, [r0]\n"
-        /* 设置主堆栈指针 msp 的值 */
-        "msr msp, r0\n"
-        /* 使能全局中断 */
-        "cpsie i\n"
-        "cpsie f\n"
-        "dsb\n"
-        "isb\n"
-        /* 调用 SVC 去启动第一个任务 */
-        "svc 0\n"
-        "nop\n"
-        "nop\n"
-    );
+    PRESERVE8/* 当前栈需按照 8 字节对齐 */
+    
+    /* 在Cortex-M 中, 0xE000ED08 是 SCB_VTOR 寄存器的地址,里面存放的是向量表的起始地址, 即 MSP 的地址. 向量表通常是从内部 FLASH 的起始地址开始存放, 那么可知 memory：0x00000000 处存放的就是 MSP 的值. 这个可以通过仿真时查看内存的值证实. */
+    ldr r0, =0xE000ED08 /* 将 0xE000ED08 这个立即数加载到寄存器 R0 */
+    ldr r0, [r0] /* 将 0xE000ED08 这个地址指向的内容加载到寄存器 R0, 此时 R0 等于 SCB_VTOR 寄存器的值, 等于 0x00000000, 即 memory 的起始地址 */
+    ldr r0, [r0] /* 将 0x00000000 这个地址指向的内容加载到 R0 */
+    msr msp, r0 /* 设置主堆栈指针 msp 的值 */
+    
+    cpsie i /* 使能全局中断 */
+    cpsie f /* 使能全局中断 */
+    dsb /* 使能全局中断 */
+    isb /* 使能全局中断 */
+    
+    svc 0 /* 调用 SVC 去启动第一个任务 */
+    nop
+    nop
 }
 
 // 按照startup中的向量表重新定义函数的名字
@@ -193,25 +179,69 @@ static void prvStartFirstTask(void)
 /**
  * @brief vPortSVCHandler()函数开始真正启动第一个任务,  不再返回
  */
-static void vPortSVCHandler(void)
+__asm void vPortSVCHandler(void)
 {
     extern pxCurrentTCB;
 
-    __asm volatile(
-        "PRESERVE8\n"
-        "ldr r3, =pxCurrentTCB\n"
-        "ldr r1, [r3]\n"
-        "ldr r0, [r1]\n" /* r0 = pxTopOfStack */
-        "ldr r1, [r3]\n"
-        "ldr r0, [r1]\n"
-        "ldmia r0!, {r4-r11}\n" /* 以 r0 为基地址, 将栈中向上增长的 8 个字的内容加载到 CPU 寄存器 r4~r11, 同时 r0 也会跟着自增 */
-        "msr psp, r0\n"         /* 将新的栈顶指针 r0 更新到 psp, 任务执行的时候使用的堆栈指针是 psp, 此时 psp(即pxTopOfStack) 指向原初始化好的 task stack 中代表 R4 的位置的下一位 */
-        "isb\n"
-        "mov r0, #0\n"
-        "msr basepri, r0\n" /* 设置 basepri 寄存器的值为 0, 即打开所有中断. basepri 是一个中断屏蔽寄存器, 大于等于此寄存器值的中断都将被屏蔽 */
-        "orr r14, #0xd\n"   /* ??在 SVC 中断服务里面, 使用的是 MSP 堆栈指针, 是处在 ARM 状态, 当从 SVC 中断服务退出前, 通过向 r14 寄存器最后 4 位按位或上0x0D, 使得硬件在退出时使用进程堆栈指针 PSP 完成出栈操作并返回后进入任务模式, 返回 Thumb 状态. 当 r14 为 0xFFFFFFFX时执行中断返回指令(bx r14), 按照cortext-m3 的做法, X 的 bit0 为 1 表示 返回 thumb 状态, bit1 和 bit2 分别表示返回后 sp 用 msp 还是 psp、以及返回到特权模式还是用户模式 */
-        "bx r14\n"/* ??异常返回, 这个时候出栈使用的是 PSP 指针, 自动将栈中的剩下内容加载到 CPU 寄存器： xPSR, PC(任务入口地址), R14, R12, R3, R2, R1, R0(任务的形参)同时 PSP 的值也将更新, 即指向任务栈的栈顶 */
-    );
+    PRESERVE8
+
+    ldr r3, =pxCurrentTCB
+    ldr r1, [r3]
+    ldr r0, [r1] /* r0 = pxTopOfStack */
+
+    ldmia r0!, {r4-r11} /* 以 r0 为基地址, 将栈中向上增长的 8 个字的内容加载到 CPU 寄存器 r4~r11, 同时 r0 也会跟着自增 */
+    msr psp, r0 /* 将新的栈顶指针 r0 更新到 psp, 任务执行的时候使用的堆栈指针是 psp, 此时 psp(即pxTopOfStack) 指向原初始化好的 task stack 中代表 R4 的位置的下一位 */
+    
+    isb
+    mov r0, #0
+    msr basepri, r0 /* 设置 basepri 寄存器的值为 0, 即打开所有中断. basepri 是一个中断屏蔽寄存器, 大于等于此寄存器值的中断都将被屏蔽 */
+    
+    orr r14, #0xd /* ??在 SVC 中断服务里面, 使用的是 MSP 堆栈指针, 是处在 ARM 状态, 当从 SVC 中断服务退出前, 通过向 r14 寄存器最后 4 位按位或上0x0D, 使得硬件在退出时使用进程堆栈指针 PSP 完成出栈操作并返回后进入任务模式, 返回 Thumb 状态. 当 r14 为 0xFFFFFFFX时执行中断返回指令(bx r14), 按照cortext-m3 的做法, X 的 bit0 为 1 表示 返回 thumb 状态, bit1 和 bit2 分别表示返回后 sp 用 msp 还是 psp、以及返回到特权模式还是用户模式 */
+    
+    bx r14 /* ??设置异常返回, 这个时候出栈使用的是 PSP 指针, 自动将栈中的剩下内容加载到 CPU 寄存器： xPSR, PC(任务入口地址), R14, R12, R3, R2, R1, R0(任务的形参)同时 PSP 的值也将更新, 即指向任务栈的栈顶 */
+}
+
+/**
+ * @brief 实现任务切换
+ */
+__asm void xPortPendSVHandler(void)
+{
+    extern pxCurrentTCB;
+    extern vTaskSwitchContext; // ??
+
+    PRESERVE8
+
+    /* 在此之前, CPU已经对上一个任务自动压栈: xPSR, PC(任务入口地址), R14, R12, R3, R2, R1, R0(任务的形参) */
+    mrs r0, psp /* PSP此时指向任务栈中代表 R0 的位置 */
+    isb
+
+    ldr r3, =pxCurrentTCB /* 上文TCB */
+    ldr r2, [r3]
+
+    stmdb r0!, {r4-r11} /* 将 CPU 寄存器 r4~r11 的值存储到任务栈, 同时更新 r0 的值, R0此时指向栈中代表 R4 的位置 */
+    str r0, [r2] /* 将 r0 的值存储到上一个任务的栈顶指针 pxTopOfStack */
+    /* 上文保存完成 */
+
+    stmdb sp!, {r3, r14} /* 将 R3 和 R14(在整个系统中, 中断使用的是主堆栈, 栈指针使用的是 MSP) 临时压入堆栈, 入栈保护 */
+
+    mov r0, #configMAX_SYSCALL_INTERRUPT_PRIORITY
+    msr basepri, r0 /* 关中断, 进入临界段, 因为接下来要更新全局指针 pxCurrentTCB的值 */
+    dsb
+    isb
+    bl vTaskSwitchContext
+    /* 完成任务切换 */
+
+    mov r0, #0 /* 退出临界段, 开中断, 直接往 BASEPRI 写 0 */
+    msr basepri, r0
+    ldmia sp!, {r3, r14} /* 弹出所保护的上文: R3(->TCB), R14(MSP) */
+
+    ldr r1, [r3]
+    ldr r0, [r1]
+    ldmia r0!, {r4-r11}
+    msr psp, r0
+    isb
+    bx r14
+    nop
 }
 
 // PM0056:
