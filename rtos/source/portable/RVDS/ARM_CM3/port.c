@@ -3,6 +3,8 @@
 #include "rtos_config.h"
 #include "task.h"
 
+/******************************************************************************/
+// xPSR 寄存器的初始值
 #define portINITIAL_XPSR (0x01000000L)
 #define portSTART_ADDRESS_MASK ((StackType_t)0xfffffffeUL)
 
@@ -171,6 +173,45 @@ __asm static void prvStartFirstTask(void)
     nop
 }
 
+// PM0056:
+// The SHPR1-SHPR3 registers set the priority level,
+// 0 to 15 of the exception handlers that have configurable priority.
+// SHPR1-SHPR3 are byte accessible.
+// Each PRI_N field is 8 bits wide,
+// but the processor implements only bits[7:4] of each field,
+// and bits[3:0] read as zero and ignore writes.
+// System handler priority register 3 (SCB_SHPR3)
+// Address: 0xE000 ED20
+// Reset value: 0x0000 0000
+// Required privilege: Privileged
+// Bits 31:24 PRI_15[7:0]: Priority of system handler 15, SysTick exception
+// Bits 23:16 PRI_14[7:0]: Priority of system handler 14, PendSV
+// Bits 15:0 Reserved, must be kept cleared
+#define portNVIC_SYSPRI2_REG (*((volatile uint32_t *)0xe000ed20))
+#define portNVIC_PENDSV_PRI (((uint32_t)configKERNEL_INTERRUPT_PRIORITY) << 16UL)
+#define portNVIC_SYSTICK_PRI (((uint32_t)configKERNEL_INTERRUPT_PRIORITY) << 24UL)
+
+/**
+ * @brief 启动调度器
+ * @returns BaseType_t 0: 不应该有返回值
+ */
+BaseType_t xPortStartScheduler(void)
+{
+    // 配置 PendSV 和 SysTick 的中断优先级为最低,
+    // SysTick 和 PendSV 都会涉及到系统调度, 系统调度的优先级要低于系统的其它硬件中断优先级,
+    // 即优先响应系统中的外部硬件中断
+    portNVIC_SYSPRI2_REG |= portNVIC_SYSTICK_PRI;
+    portNVIC_SYSPRI2_REG |= portNVIC_PENDSV_PRI;
+
+    uxCriticalNesting = 0;
+
+    // 启动第一个任务, 不再返回
+    prvStartFirstTask();
+
+    // 不应该运行到这里
+    return 0;
+}
+
 // 按照startup中的向量表重新定义函数的名字
 #define xPortPendSVHandler PendSV_Handler
 #define xPortSysTickSVHandler SysTick_Handler
@@ -200,7 +241,9 @@ __asm void vPortSVCHandler(void)
     
     bx r14 /* ??设置异常返回, 这个时候出栈使用的是 PSP 指针, 自动将栈中的剩下内容加载到 CPU 寄存器： xPSR, PC(任务入口地址), R14, R12, R3, R2, R1, R0(任务的形参)同时 PSP 的值也将更新, 即指向任务栈的栈顶 */
 }
+/******************************************************************************/
 
+/******************************************************************************/
 /**
  * @brief 实现任务切换
  */
@@ -243,40 +286,37 @@ __asm void xPortPendSVHandler(void)
     bx r14
     nop
 }
+/******************************************************************************/
 
-// PM0056:
-// The SHPR1-SHPR3 registers set the priority level,
-// 0 to 15 of the exception handlers that have configurable priority.
-// SHPR1-SHPR3 are byte accessible.
-// Each PRI_N field is 8 bits wide,
-// but the processor implements only bits[7:4] of each field,
-// and bits[3:0] read as zero and ignore writes.
-// System handler priority register 3 (SCB_SHPR3)
-// Address: 0xE000 ED20
-// Reset value: 0x0000 0000
-// Required privilege: Privileged
-// Bits 31:24 PRI_15[7:0]: Priority of system handler 15, SysTick exception
-// Bits 23:16 PRI_14[7:0]: Priority of system handler 14, PendSV
-// Bits 15:0 Reserved, must be kept cleared
-#define portNVIC_SYSPRI2_REG (*((volatile uint32_t *)0xe000ed20))
-#define portNVIC_PENDSV_PRI (((uint32_t)configKERNEL_INTERRUPT_PRIORITY) << 16UL)
-#define portNVIC_SYSTICK_PRI (((uint32_t)configKERNEL_INTERRUPT_PRIORITY) << 24UL)
+/******************************************************************************/
+// Masks off all bits but the VECTACTIVE bits in the ICSR register.
+#define portVECTACTIVE_MASK (0xFFUL)
+
+// 临界段嵌套计数器, 默认初始化为 0xaaaaaaaa, 在调度器启动时会被重新初始化为 0 ：vTaskStartScheduler()->xPortStartScheduler()->uxCriticalNesting = 0
+static uint32_t uxCriticalNesting = 0xaaaaaaaa;
 
 /**
- * @brief 启动调度器
- * @returns BaseType_t 0: 不应该有返回值
+ * @brief 进入临界段, 无中断保护
  */
-BaseType_t xPortStartScheduler(void)
+void vPortEnterCritical(void)
 {
-    // 配置 PendSV 和 SysTick 的中断优先级为最低,
-    // SysTick 和 PendSV 都会涉及到系统调度, 系统调度的优先级要低于系统的其它硬件中断优先级,
-    // 即优先响应系统中的外部硬件中断
-    portNVIC_SYSPRI2_REG |= portNVIC_SYSTICK_PRI;
-    portNVIC_SYSPRI2_REG |= portNVIC_PENDSV_PRI;
+    portDISABLE_INTERRUPTS();
+    uxCriticalNesting++;
 
-    // 启动第一个任务, 不再返回
-    prvStartFirstTask();
-
-    // 不应该运行到这里
-    return 0;
+    // 如果 uxCriticalNesting 等于 1, 即一层嵌套, 要确保当前没有中断活跃, 即内核外设 SCB 中的中断和控制寄存器 SCB_ICSR 的低 8 位要等于 0
+    if (uxCriticalNesting == 1)
+        configASSERT((portNVIC_INT_CTRL_REG & portVECTACTIVE_MASK) == 0);
 }
+
+/**
+ * @brief 退出临界段, 无中断保护
+ */
+void vPortExitCritical(void)
+{
+    configASSERT(uxCriticalNesting);
+    uxCriticalNesting--;
+
+    if (uxCriticalNesting == 0)
+        portENABLE_INTERRUPTS();
+}
+/******************************************************************************/
