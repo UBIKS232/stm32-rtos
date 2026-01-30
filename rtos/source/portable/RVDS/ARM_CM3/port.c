@@ -57,7 +57,7 @@ void xTaskIncrementTick(void)
     // ??扫描就绪列表中每个链表中第一个任务的 xTicksToDelay, 如果不为 0, 则减 1
     for (i = 0; i < configMAX_PRIORITIES; i++)
     {
-        pxTCB = (TCB_t *)listGET_OWNER_OF_HEAD_ENTRY((&pxReadyTasksLists[i]));
+        pxTCB = (TCB_t *)listGET_OWNER_OF_HEAD_ENTRY(&(pxReadyTasksLists[i]));
         if (pxTCB->xTicksToDelay > 0)
             pxTCB->xTicksToDelay--;
     }
@@ -65,10 +65,14 @@ void xTaskIncrementTick(void)
     portYIELD();
 }
 
+// 按照startup中的向量表重新定义函数的名字
+#define xPortSysTickHandler SysTick_Handler
+
 /**
  * @brief SysTick call back, 实现延时
  */
-void xPortSystickHandler(void)
+void xPortSysTickHandler(void)
+// void SysTick_Handler(void)
 {
     // vPortRaiseBASEPRI();
     portDISABLE_INTERRUPTS();
@@ -295,7 +299,6 @@ BaseType_t xPortStartScheduler(void)
 
 // 按照startup中的向量表重新定义函数的名字
 #define xPortPendSVHandler PendSV_Handler
-#define xPortSysTickSVHandler SysTick_Handler
 #define vPortSVCHandler SVC_Handler
 
 /**

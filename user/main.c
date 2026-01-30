@@ -79,9 +79,9 @@ void Task1_Entry(void *p_arg)
         taskYIELD();
 #else
         flag1 = 1;
-        vTaskDelay(100);
+        vTaskDelay(10);
         flag1 = 0;
-        vTaskDelay(100);
+        vTaskDelay(10);
 #endif
     }
 }
@@ -99,9 +99,9 @@ void Task2_Entry(void *p_arg)
         taskYIELD();
 #else
         flag2 = 1;
-        vTaskDelay(100);
+        vTaskDelay(10);
         flag2 = 0;
-        vTaskDelay(100);
+        vTaskDelay(10);
 #endif
     }
 }

@@ -14,7 +14,7 @@
 #define configMAX_TASK_NAME_LEN 16
 #define configSUPPORT_STATIC_ALLOCATION 1
 // 最大任务优先级, 默认定义为 5, 最大支持 256 个优先级
-#define configMAX_PRIORITIES 5
+#define configMAX_PRIORITIES 3
 // 配置中断屏蔽寄存器 BASEPRI 的值, 高四位有效. 目前配置为 191, 因为是高四位有效, 所以实际值等于 11, 即优先级高于或者等于11 的中断都将被屏蔽. 0xBF(0b1011111)
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY 191
 

@@ -153,8 +153,12 @@ extern TCB_t Task2TCB;
 void prvIdleTask(void *p_arg)
 {
     for (;;)
-        ;
+        taskYIELD();
 }
+
+#define PRIVILEGED_DATA
+// Holds the handle of the idle task. The idle task is created automatically when the scheduler is started.
+PRIVILEGED_DATA static TaskHandle_t xIdleTaskHandle = NULL;
 
 /**
  * @brief 调度器启动
@@ -170,12 +174,12 @@ void vTaskStartScheduler(void)
                                   &pxIdleTaskStackBuffer,
                                   &ulIldeTaskStackSize);
 
-    TaskHandle_t xIdleTaskHandle = xTaskCreateStatic((TaskFuntion_t)prvIdleTask,
-                                                     (char *)"IDLE",
-                                                     (uint32_t)ulIldeTaskStackSize,
-                                                     (void *)NULL,
-                                                     (StackType_t *)pxIdleTaskStackBuffer,
-                                                     (TCB_t *)pxIdleTaskTCBBuffer);
+    xIdleTaskHandle = xTaskCreateStatic((TaskFuntion_t)prvIdleTask,
+                                        (char *)"IDLE",
+                                        (uint32_t)ulIldeTaskStackSize,
+                                        (void *)NULL,
+                                        (StackType_t *)pxIdleTaskStackBuffer,
+                                        (TCB_t *)pxIdleTaskTCBBuffer);
 
     vListInsert(&(pxReadyTasksLists[0]),
                 &(((TCB_t *)pxIdleTaskTCBBuffer)->xStateListItem));
@@ -219,7 +223,7 @@ void vTaskSwitchContext(void)
         }
         else
         {
-            pxCurrentTCB = &IdleTaskTCB;
+            return;
         }
     }
     else
