@@ -125,6 +125,9 @@ static portFORCE_INLINE void vPortSetBASEPRI(uint32_t ulBASEPRI)
         msr basepri, ulBASEPRI
     }
 }
+
+
+
 /******************************************************************************/
 
 #endif // _PORTMACRO_H_

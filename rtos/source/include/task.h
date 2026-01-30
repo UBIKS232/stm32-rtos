@@ -29,6 +29,8 @@ void vTaskStartScheduler(void);
 #define taskYIELD() portYIELD()
 
 void vTaskSwitchContext(void);
+
+void vTaskDelay(const TickType_t xTicksToDelay);
 /******************************************************************************/
 
 /******************************************************************************/

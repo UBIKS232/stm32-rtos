@@ -1,6 +1,15 @@
 #ifndef _RTOS_CONFIG_H_
 #define _RTOS_CONFIG_H_
 
+#include "portmacro.h"
+
+// 配置成与硬件的系统时钟一样
+#define configCPU_CLOCK_HZ ((unsigned long)72000000)
+// SysTick 每秒中断多少次, 目前配置为 100, 即每 10ms 中断一次
+#define configTICK_RATE_HZ ((TickType_t)100)
+
+#define configMINIMAL_STACK_SIZE ((unsigned short)128)
+
 #define configUSE_16_BIT_TICKS 0
 #define configMAX_TASK_NAME_LEN 16
 #define configSUPPORT_STATIC_ALLOCATION 1

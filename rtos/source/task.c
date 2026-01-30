@@ -5,6 +5,8 @@
 #include "projectdefs.h"
 #include "list.h"
 
+/******************************************************************************/
+
 // 就绪列表: 任务创建好之后, 需要把任务添加到就绪列表里面，表示任务已经就绪
 // 同一优先级的任务统一插入到就绪列表的同一条链表中
 List_t pxReadyTasksLists[configMAX_PRIORITIES] = {0};
@@ -127,16 +129,58 @@ TaskHandle_t xTaskCreateStatic(TaskFuntion_t pxTaskCode,
 }
 
 #endif
+/******************************************************************************/
 
+/******************************************************************************/
 TCB_t *pxCurrentTCB = NULL;
+/******************************************************************************/
+
+/******************************************************************************/
+extern TCB_t IdleTaskTCB;
+extern StackType_t IdleTaskStack[configMINIMAL_STACK_SIZE];
+void vApplicationGetIdleTaskMemory(TCB_t **ppxIdleTaskTCBBuffer,
+                                   StackType_t **ppxIdleTaskStackBuffer,
+                                   uint32_t *pulIdleTaskStackSize)
+{
+    *ppxIdleTaskStackBuffer = IdleTaskStack;
+    *ppxIdleTaskTCBBuffer = &IdleTaskTCB;
+    *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+}
+
 extern TCB_t Task1TCB;
 extern TCB_t Task2TCB;
+
+void prvIdleTask(void *p_arg)
+{
+    for (;;)
+        ;
+}
 
 /**
  * @brief 调度器启动
  */
 void vTaskStartScheduler(void)
 {
+    // create idle task: start
+    TCB_t *pxIdleTaskTCBBuffer = NULL;
+    StackType_t *pxIdleTaskStackBuffer = NULL;
+    uint32_t ulIldeTaskStackSize = 0;
+
+    vApplicationGetIdleTaskMemory(&pxIdleTaskTCBBuffer,
+                                  &pxIdleTaskStackBuffer,
+                                  &ulIldeTaskStackSize);
+
+    TaskHandle_t xIdleTaskHandle = xTaskCreateStatic((TaskFuntion_t)prvIdleTask,
+                                                     (char *)"IDLE",
+                                                     (uint32_t)ulIldeTaskStackSize,
+                                                     (void *)NULL,
+                                                     (StackType_t *)pxIdleTaskStackBuffer,
+                                                     (TCB_t *)pxIdleTaskTCBBuffer);
+
+    vListInsert(&(pxReadyTasksLists[0]),
+                &(((TCB_t *)pxIdleTaskTCBBuffer)->xStateListItem));
+    // create idle task: end
+
     // 目前不支持按优先级调度, 先指定一个最先运行的任务
     pxCurrentTCB = &Task1TCB;
 
@@ -146,6 +190,7 @@ void vTaskStartScheduler(void)
     }
 }
 
+#if 0
 /**
  * @brief 上下文切换, 更新pxCurrentTCB
  */
@@ -156,3 +201,73 @@ void vTaskSwitchContext(void)
     else
         pxCurrentTCB = &Task1TCB;
 }
+#else
+/**
+ * @brief 上下文切换, 更新pxCurrentTCB
+ */
+void vTaskSwitchContext(void)
+{
+    if (pxCurrentTCB == &IdleTaskTCB)
+    {
+        if (Task1TCB.xTicksToDelay == 0)
+        {
+            pxCurrentTCB = &Task1TCB;
+        }
+        else if (Task2TCB.xTicksToDelay == 0)
+        {
+            pxCurrentTCB = &Task2TCB;
+        }
+        else
+        {
+            pxCurrentTCB = &IdleTaskTCB;
+        }
+    }
+    else
+    {
+        if (pxCurrentTCB == &Task1TCB)
+        {
+            if (Task2TCB.xTicksToDelay == 0)
+            {
+                pxCurrentTCB = &Task2TCB;
+            }
+            else if (pxCurrentTCB->xTicksToDelay != 0)
+            {
+                pxCurrentTCB = &IdleTaskTCB;
+            }
+            else
+            {
+                return;
+            }
+        }
+        else if (pxCurrentTCB == &Task2TCB)
+        {
+            if (Task1TCB.xTicksToDelay == 0)
+            {
+                pxCurrentTCB = &Task1TCB;
+            }
+            else if (pxCurrentTCB->xTicksToDelay != 0)
+            {
+                pxCurrentTCB = &IdleTaskTCB;
+            }
+            else
+            {
+                return;
+            }
+        }
+    }
+}
+#endif
+/******************************************************************************/
+
+/******************************************************************************/
+void vTaskDelay(const TickType_t xTicksToDelay)
+{
+    TCB_t *pxTCB = NULL;
+
+    pxTCB = pxCurrentTCB;
+
+    pxTCB->xTicksToDelay = xTicksToDelay;
+
+    taskYIELD();
+}
+/******************************************************************************/

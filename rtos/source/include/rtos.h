@@ -17,6 +17,8 @@ struct taskTaskControlBlock
     StackType_t *pxStack;
     // 任务名称, 字符串
     char pcTaskName[configMAX_TASK_NAME_LEN];
+    // 延时, 等于0时延时结束
+    TickType_t xTicksToDelay;
 };
 
 #endif // _RTOS_H_

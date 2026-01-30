@@ -3,6 +3,84 @@
 #include "rtos_config.h"
 #include "task.h"
 
+// 临界段嵌套计数器, 默认初始化为 0xaaaaaaaa, 在调度器启动时会被重新初始化为 0 ：vTaskStartScheduler()->xPortStartScheduler()->uxCriticalNesting = 0
+static uint32_t uxCriticalNesting = 0xaaaaaaaa;
+
+/******************************************************************************/
+// SysTick init
+// SysTick 控制寄存器
+#define portNVIC_SYSTICK_CTRL_REG (*((volatile uint32_t *)0xE000E010))
+// SysTick 重装载寄存器寄存器
+#define portNVIC_SYSTICK_LOAD_REG (*((volatile uint32_t *)0xE000E014))
+
+#ifndef configSYSTICK_CLOCK_HZ
+#define configSYSTICK_CLOCK_HZ configCPU_CLOCK_HZ
+// 确保 SysTick 的时钟与内核时钟一致
+#define portNVIC_SYSTICK_CLK_BIT (1ul << 2ul)
+#else
+#define portNVIC_SYSTICK_CLK_BIT (0)
+#endif
+
+#define portNVIC_SYSTICK_INT_BIT (1UL << 1UL)
+#define portNVIC_SYSTICK_ENABLE_BIT (1UL << 0UL)
+
+/**
+ * @brief SysTick 初始化
+ */
+void vPortSetupTimerInterrupt(void)
+{
+    // 设置重装载寄存器的值
+    portNVIC_SYSTICK_LOAD_REG = (configSYSTICK_CLOCK_HZ / configTICK_RATE_HZ) - 1UL;
+
+    // 设置系统定时器(??SysTick)的时钟等于内核时钟, 使能 SysTick 定时器中断, 使能 SysTick 定时器
+    portNVIC_SYSTICK_CTRL_REG = (portNVIC_SYSTICK_CLK_BIT |
+                                 portNVIC_SYSTICK_INT_BIT |
+                                 portNVIC_SYSTICK_ENABLE_BIT);
+}
+
+// 系统时基计时器
+TickType_t xTickCount = 0;
+
+/**
+ * @brief 更新系统时基
+ */
+void xTaskIncrementTick(void)
+{
+    extern List_t pxReadyTasksLists[configMAX_PRIORITIES];
+
+    TCB_t *pxTCB = NULL;
+    BaseType_t i = 0;
+
+    const TickType_t xConstTickCount = xTickCount + 1;
+    xTickCount = xConstTickCount;
+
+    // ??扫描就绪列表中每个链表中第一个任务的 xTicksToDelay, 如果不为 0, 则减 1
+    for (i = 0; i < configMAX_PRIORITIES; i++)
+    {
+        pxTCB = (TCB_t *)listGET_OWNER_OF_HEAD_ENTRY((&pxReadyTasksLists[i]));
+        if (pxTCB->xTicksToDelay > 0)
+            pxTCB->xTicksToDelay--;
+    }
+
+    portYIELD();
+}
+
+/**
+ * @brief SysTick call back, 实现延时
+ */
+void xPortSystickHandler(void)
+{
+    // vPortRaiseBASEPRI();
+    portDISABLE_INTERRUPTS();
+
+    xTaskIncrementTick();
+
+    // portENABLE_INTERRUPTS()
+    // vPortClearBASEPRIFromISR();
+    portENABLE_INTERRUPTS();
+}
+/******************************************************************************/
+
 /******************************************************************************/
 // xPSR 寄存器的初始值
 #define portINITIAL_XPSR (0x01000000L)
@@ -26,8 +104,8 @@ static void prvTaskExitError(void)
  * @returns StackType_t pxTopOfStack: 此时 pxTopOfStack 指向空闲栈
  */
 StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
-                                  TaskFuntion_t pxCode,
-                                  void *pvParameters)
+                                   TaskFuntion_t pxCode,
+                                   void *pvParameters)
 {
     // 注意:
     // Cortex-M3 的栈是由高地址向低地址生长的,
@@ -205,6 +283,9 @@ BaseType_t xPortStartScheduler(void)
 
     uxCriticalNesting = 0;
 
+    // 初始化 SysTick
+    vPortSetupTimerInterrupt();
+
     // 启动第一个任务, 不再返回
     prvStartFirstTask();
 
@@ -218,7 +299,7 @@ BaseType_t xPortStartScheduler(void)
 #define vPortSVCHandler SVC_Handler
 
 /**
- * @brief vPortSVCHandler()函数开始真正启动第一个任务,  不再返回
+ * @brief SVC call back, vPortSVCHandler()函数开始真正启动第一个任务,  不再返回
  */
 __asm void vPortSVCHandler(void)
 {
@@ -241,11 +322,9 @@ __asm void vPortSVCHandler(void)
     
     bx r14 /* ??设置异常返回, 这个时候出栈使用的是 PSP 指针, 自动将栈中的剩下内容加载到 CPU 寄存器： xPSR, PC(任务入口地址), R14, R12, R3, R2, R1, R0(任务的形参)同时 PSP 的值也将更新, 即指向任务栈的栈顶 */
 }
-/******************************************************************************/
 
-/******************************************************************************/
 /**
- * @brief 实现任务切换
+ * @brief PendSV call back, 实现任务切换
  */
 __asm void xPortPendSVHandler(void)
 {
@@ -291,9 +370,6 @@ __asm void xPortPendSVHandler(void)
 /******************************************************************************/
 // Masks off all bits but the VECTACTIVE bits in the ICSR register.
 #define portVECTACTIVE_MASK (0xFFUL)
-
-// 临界段嵌套计数器, 默认初始化为 0xaaaaaaaa, 在调度器启动时会被重新初始化为 0 ：vTaskStartScheduler()->xPortStartScheduler()->uxCriticalNesting = 0
-static uint32_t uxCriticalNesting = 0xaaaaaaaa;
 
 /**
  * @brief 进入临界段, 无中断保护

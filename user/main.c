@@ -7,21 +7,27 @@
 
 extern List_t pxReadyTasksLists[configMAX_PRIORITIES];
 
-portCHAR flag1 = 0;
-portCHAR flag2 = 0;
+// idle task
+TCB_t IdleTaskTCB = {0};
+StackType_t IdleTaskStack[configMINIMAL_STACK_SIZE];
 
+// task 1
+portCHAR flag1 = 0;
 TCB_t Task1TCB = {0};
-TCB_t Task2TCB = {0};
 TaskHandle_t Task1_Handle = NULL;
-TaskHandle_t Task2_Handle = NULL;
 #define TASK1_STACK_SIZE 128
 StackType_t Task1Stack[TASK1_STACK_SIZE];
+void Task1_Entry(void *p_arg);
+
+// task 2
+portCHAR flag2 = 0;
+TCB_t Task2TCB = {0};
+TaskHandle_t Task2_Handle = NULL;
 #define TASK2_STACK_SIZE 128
 StackType_t Task2Stack[TASK2_STACK_SIZE];
+void Task2_Entry(void *p_arg);
 
 void delay(uint32_t count);
-void Task1_Entry(void *p_arg);
-void Task2_Entry(void *p_arg);
 
 int main(void)
 {
@@ -54,7 +60,6 @@ int main(void)
     }
 }
 
-
 void delay(uint32_t count)
 {
     for (; count != 0; count--)
@@ -65,12 +70,19 @@ void Task1_Entry(void *p_arg)
 {
     for (;;)
     {
+#if 0
         flag1 = 1;
         delay(100);
         flag1 = 0;
         delay(100);
-        
+
         taskYIELD();
+#else
+        flag1 = 1;
+        vTaskDelay(100);
+        flag1 = 0;
+        vTaskDelay(100);
+#endif
     }
 }
 
@@ -78,11 +90,18 @@ void Task2_Entry(void *p_arg)
 {
     for (;;)
     {
+#if 0
         flag2 = 1;
         delay(100);
         flag2 = 0;
         delay(100);
-        
+
         taskYIELD();
+#else
+        flag2 = 1;
+        vTaskDelay(100);
+        flag2 = 0;
+        vTaskDelay(100);
+#endif
     }
 }

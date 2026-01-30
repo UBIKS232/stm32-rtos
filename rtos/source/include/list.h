@@ -91,18 +91,22 @@ void vListInsert(List_t *const pxLis, ListItem_t *const pxNewListItem);
 #define listCURRENT_LIST_LENGTH(pxList) \
     ((pxList)->uxNumberOfItems)
 
-// 获取链表第一个节点的 owner, 即 TCB(Task Control Block)
-#define listGET_OWNER_OF_NEXT_ENTRY(pxTCB, pxList)                                 \
-    do                                                                             \
-    {                                                                              \
-        List_t *const pxConstList = (pxList);                                      \
-        (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext;                   \
-        if ((void *)((pxConstList)->pxIndex) == (void *)((pxConstList)->xListEnd)) \
-        {                                                                          \
-            /* 防止 index 索引到 root 内的 end 节点(没有 owner ), 因此加入了一次判断?? */    \
-            (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext;              \
-        }                                                                          \
-        (pxTCB) = (pxConstList)->pxIndex->pvOwner;                                 \
+// 获取链表第一个节点的 owner(即 TCB(Task Control Block))
+#define listGET_OWNER_OF_HEAD_ENTRY(pxList) \
+    ((((pxList)->xListEnd).pxNext)->pvOwner)
+
+// 获取链表下一个节点的 owner(即 TCB(Task Control Block))
+#define listGET_OWNER_OF_NEXT_ENTRY(pxTCB, pxList)                                        \
+    do                                                                                    \
+    {                                                                                     \
+        List_t *const pxConstList = (pxList);                                             \
+        (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext;                          \
+        if ((void *)((pxConstList)->pxIndex) == (void *)((pxConstList)->xListEnd))        \
+        {                                                                                 \
+            /* 防止 index 索引到 root 内的 end 节点(没有 owner ), 因此加入了一次判断?? */ \
+            (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext;                      \
+        }                                                                                 \
+        (pxTCB) = (pxConstList)->pxIndex->pvOwner;                                        \
     } while (0);
 
 #endif // _LIST_H_
