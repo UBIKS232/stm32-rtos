@@ -6,11 +6,16 @@
 #include "list.h"
 
 /******************************************************************************/
-
 // 就绪列表: 任务创建好之后, 需要把任务添加到就绪列表里面，表示任务已经就绪
 // 同一优先级的任务统一插入到就绪列表的同一条链表中
 List_t pxReadyTasksLists[configMAX_PRIORITIES] = {0};
+// TCB_t *pxCurrentTCB
+TCB_t *pxCurrentTCB = NULL;
+// UBaseType_t uxCurrentNumberOfTasks
+static volatile UBaseType_t uxCurrentNumberOfTasks = 0UL;
+/******************************************************************************/
 
+/******************************************************************************/
 /**
  * @brief 私有函数, 就序列表初始化
  */
@@ -41,6 +46,7 @@ static void prvInitialiseNewTask(TaskFuntion_t pxTaskCode,
                                  const char *const pcName,
                                  const uint32_t ulStackDepth,
                                  void *const pvParameters,
+                                 UBaseType_t uxPriority,
                                  TaskHandle_t *const pxCreateTask,
                                  TCB_t *pxNewTCB)
 {
@@ -74,6 +80,13 @@ static void prvInitialiseNewTask(TaskFuntion_t pxTaskCode,
     // 设置 xStateListItem 节点的拥有者
     listSET_LIST_ITEM_OWNER(&(pxNewTCB->xStateListItem), pxNewTCB);
 
+    // 初始化优先级
+    if (uxPriority >= (UBaseType_t)configMAX_PRIORITIES)
+    {
+        uxPriority = (UBaseType_t)configMAX_PRIORITIES - (UBaseType_t)1U;
+    }
+    pxNewTCB->uxPriority = uxPriority;
+
     // 初始化任务栈
     pxNewTCB->pxTopOfStack = pxPortInitialiseStack(pxTopOfStack,
                                                    pxTaskCode,
@@ -86,6 +99,47 @@ static void prvInitialiseNewTask(TaskFuntion_t pxTaskCode,
     }
 }
 
+// 将任务添加到就序列表
+#define prvAddTaskToReadyList(pxTCB)                              \
+    do                                                            \
+    {                                                             \
+        taskRECORD_READY_PRIORITY((pxTCB)->uxPriority);           \
+        vListInsertEnd(&(pxReadyTasksLists[(pxTCB)->uxPriority]), \
+                       &((pxTCB)->xStateListItem));               \
+    } while (0);
+
+/**
+ * @brief 添加新任务到任务就绪列表
+ * @param TCB_t *pxNewTCB
+ */
+static void prvAddNewTaskToReadyList(TCB_t *pxNewTCB)
+{
+    taskENTER_CRITICAL();
+    {
+        uxCurrentNumberOfTasks++;
+
+        if (pxCurrentTCB == NULL)
+        {
+            pxCurrentTCB = pxNewTCB;
+
+            if (uxCurrentNumberOfTasks == (UBaseType_t)1)
+            {
+                prvInitialiseTaskLists();
+            }
+        }
+        else
+        {
+            // 如果 pxCurrentTCB 非空且新任务优先级更高, 则将其指向新任务
+            if (pxCurrentTCB->uxPriority <= pxNewTCB->uxPriority)
+            {
+                pxCurrentTCB = pxNewTCB;
+            }
+        }
+        prvAddTaskToReadyList(pxNewTCB);
+    }
+    taskEXIT_CRITICAL();
+}
+
 #if (configSUPPORT_STATIC_ALLOCATION == 1)
 
 /**
@@ -94,6 +148,7 @@ static void prvInitialiseNewTask(TaskFuntion_t pxTaskCode,
  * @param const char *const pcName: 任务名称, 字符串形式
  * @param const uint32_t ulStackDepth: 任务栈大小, 单位为字
  * @param void *const pvParameters: 任务形参
+ * @param UbaseType_t uxPriority: 任务优先级, 数值越大优先级越高
  * @param StackType_t *const puxStackBuffer: 任务栈起始地址
  * @param TCB_t *const pxTaskBuffer: 任务控制块指针
  * @returns TaskHandle_t xReturn: 任务句柄, 用于指向任务的 TCB
@@ -102,6 +157,7 @@ TaskHandle_t xTaskCreateStatic(TaskFuntion_t pxTaskCode,
                                const char *const pcName,
                                const uint32_t ulStackDepth,
                                void *const pvParameters,
+                               UBaseType_t uxPriority,
                                StackType_t *const puxStackBuffer,
                                TCB_t *const pxTaskBuffer)
 {
@@ -117,8 +173,11 @@ TaskHandle_t xTaskCreateStatic(TaskFuntion_t pxTaskCode,
                              pcName,
                              ulStackDepth,
                              pvParameters,
+                             uxPriority,
                              &xReturn,
                              pxNewTCB);
+
+        prvAddNewTaskToReadyList(pxNewTCB);
     }
     else
     {
@@ -129,10 +188,6 @@ TaskHandle_t xTaskCreateStatic(TaskFuntion_t pxTaskCode,
 }
 
 #endif
-/******************************************************************************/
-
-/******************************************************************************/
-TCB_t *pxCurrentTCB = NULL;
 /******************************************************************************/
 
 /******************************************************************************/
@@ -178,15 +233,18 @@ void vTaskStartScheduler(void)
                                         (char *)"IDLE",
                                         (uint32_t)ulIldeTaskStackSize,
                                         (void *)NULL,
+                                        (UBaseType_t)tskIDLE_PRIORITY,
                                         (StackType_t *)pxIdleTaskStackBuffer,
                                         (TCB_t *)pxIdleTaskTCBBuffer);
 
-    vListInsert(&(pxReadyTasksLists[0]),
-                &(((TCB_t *)pxIdleTaskTCBBuffer)->xStateListItem));
+    // vListInsertEnd(&(pxReadyTasksLists[0]),
+    //             &(((TCB_t *)pxIdleTaskTCBBuffer)->xStateListItem));
     // create idle task: end
 
+#if 0
     // 目前不支持按优先级调度, 先指定一个最先运行的任务
     pxCurrentTCB = &Task1TCB;
+#endif
 
     if (xPortStartScheduler() != pdFALSE)
     {
@@ -205,7 +263,8 @@ void vTaskSwitchContext(void)
     else
         pxCurrentTCB = &Task1TCB;
 }
-#else
+#endif
+#if 0
 /**
  * @brief 上下文切换, 更新pxCurrentTCB
  */
@@ -260,6 +319,13 @@ void vTaskSwitchContext(void)
         }
     }
 }
+#else
+/**
+ * @brief 上下文切换, 更新pxCurrentTCB
+ */
+void vTaskSwitchContext(void){
+    taskSELECT_HIGHEST_PRIORITY_TASK();
+}
 #endif
 /******************************************************************************/
 
@@ -271,6 +337,10 @@ void vTaskDelay(const TickType_t xTicksToDelay)
     pxTCB = pxCurrentTCB;
 
     pxTCB->xTicksToDelay = xTicksToDelay;
+
+    // 将任务从就绪列表移除, 与此同时需要存在一个延时列表
+    // uxListRemove(&(pxTCB->xStateListItem));
+    taskRESET_READY_PRIORITY(pxTCB->uxPriority);
 
     taskYIELD();
 }

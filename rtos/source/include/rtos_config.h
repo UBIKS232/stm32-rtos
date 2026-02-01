@@ -23,6 +23,8 @@
 #define configLIBRARY_LOWEST_INTERRUPT_PRIORITY 15
 #define configKERNEL_INTERRUPT_PRIORITY (configLIBRARY_LOWEST_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
 
+#define configUSE_PORT_OPTIMISED_TASK_SELECTION 1
+
 #ifndef configASSERT
 #define configASSERT(x)
 #define configASSERT_DEFINED 0

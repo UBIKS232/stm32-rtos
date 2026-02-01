@@ -125,9 +125,17 @@ static portFORCE_INLINE void vPortSetBASEPRI(uint32_t ulBASEPRI)
         msr basepri, ulBASEPRI
     }
 }
-
-
-
 /******************************************************************************/
 
+/******************************************************************************/
+// 将 uxPriority 标记到 uxReadyPriorities(uint32_t) 的某一位上
+#define portRECORD_READY_PRIORITY(uxPriority, uxReadyPriorities) \
+    (uxReadyPriorities) = (1UL << (uxPriority))
+// 按照 uxPriority 将 uxReadyPriorities(uint32_t) 的某一位清零
+#define portRESET_READY_PRIORITY(uxPriority, uxReadyPriorities) \
+    (uxReadyPriorities) &= ~(1UL << (uxPriority))
+// CLZ, 针对 Cortex-M3 优化的最高优先级寻找
+#define portGET_HIGHEST_PRIORITY(uxTopPriority, uxReadyPriorities) \
+    (uxTopPriority) = (31UL - (uint32_t)__clz((uxReadyPriorities)))
+/******************************************************************************/
 #endif // _PORTMACRO_H_

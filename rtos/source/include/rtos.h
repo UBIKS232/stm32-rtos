@@ -19,6 +19,8 @@ struct taskTaskControlBlock
     char pcTaskName[configMAX_TASK_NAME_LEN];
     // 延时, 等于0时延时结束
     TickType_t xTicksToDelay;
+    // 优先级, 数字越大优先级越高
+    UBaseType_t uxPriority;
 };
 
 #endif // _RTOS_H_

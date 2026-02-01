@@ -40,12 +40,14 @@ int main(void)
                                      (char *)"Task1",
                                      (uint32_t)TASK1_STACK_SIZE,
                                      (void *)NULL,
+                                     (UBaseType_t)1,
                                      (StackType_t *)Task1Stack,
                                      (TCB_t *)&Task1TCB);
     Task2_Handle = xTaskCreateStatic((TaskFuntion_t)Task2_Entry,
                                      (char *)"Task2",
                                      (uint32_t)TASK1_STACK_SIZE,
                                      (void *)NULL,
+                                     (UBaseType_t)2,
                                      (StackType_t *)Task2Stack,
                                      (TCB_t *)&Task2TCB);
     vListInsertEnd(&(pxReadyTasksLists[1]),

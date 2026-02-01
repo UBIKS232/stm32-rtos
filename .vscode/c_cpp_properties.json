@@ -11,8 +11,8 @@
                 "e:\\Study\\embedded\\STM\\rtos_lab\\rtos\\source",
                 "e:\\Study\\embedded\\STM\\rtos_lab\\rtos\\source\\include",
                 "e:\\Study\\embedded\\STM\\rtos_lab\\rtos\\source\\portable\\RVDS\\ARM_CM3",
-                "d:\\Coding\\Keil5v23\\ARM\\ARMCC\\include",
-                "d:\\Coding\\Keil5v23\\ARM\\ARMCC\\include\\rw",
+                "d:\\Coding\\Keil5v41\\ARM\\ARMCC\\include",
+                "d:\\Coding\\Keil5v41\\ARM\\ARMCC\\include\\rw",
                 "e:\\Study\\embedded\\STM\\rtos_lab\\doc",
                 "${default}"
             ],
@@ -22,7 +22,7 @@
                 "__CC_ARM",
                 "USE_STDPERIPH_DRIVER"
             ],
-            "intelliSenseMode": "windows-msvc-arm"
+            "intelliSenseMode": "gcc-arm"
         }
     ],
     "version": 4

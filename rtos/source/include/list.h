@@ -13,7 +13,7 @@ struct xLIST_ITEM
     ListItem_t *pxNext;
     // 上一节点
     ListItem_t *pxPrevious;
-    // 指向拥有该节点的内核对象, 即节点内嵌于的数据结构, 属于某个数据结构的一个成员, 数据结构通常为 TCB(?)
+    // 指向拥有该节点的内核对象, 即节点内嵌于的数据结构, 属于某个数据结构的一个成员, 数据结构通常为 TCB(??)
     void *pvOwner;
     // 指向该节点所在链表, 通常指向根节点
     void *pvContainer;
@@ -91,22 +91,59 @@ void vListInsert(List_t *const pxLis, ListItem_t *const pxNewListItem);
 #define listCURRENT_LIST_LENGTH(pxList) \
     ((pxList)->uxNumberOfItems)
 
-// 获取链表第一个节点的 owner(即 TCB(Task Control Block))
+// 获取链表第一个节点的 owner
 #define listGET_OWNER_OF_HEAD_ENTRY(pxList) \
     ((((pxList)->xListEnd).pxNext)->pvOwner)
 
-// 获取链表下一个节点的 owner(即 TCB(Task Control Block))
-#define listGET_OWNER_OF_NEXT_ENTRY(pxTCB, pxList)                                        \
-    do                                                                                    \
-    {                                                                                     \
-        List_t *const pxConstList = (pxList);                                             \
-        (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext;                          \
-        if ((void *)((pxConstList)->pxIndex) == (void *)((pxConstList)->xListEnd))        \
-        {                                                                                 \
-            /* 防止 index 索引到 root 内的 end 节点(没有 owner ), 因此加入了一次判断?? */ \
-            (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext;                      \
-        }                                                                                 \
-        (pxTCB) = (pxConstList)->pxIndex->pvOwner;                                        \
+#if 0
+// 获取链表下一个节点的 owner
+#define listGET_OWNER_OF_NEXT_ENTRY(pxTCB, pxList)               \
+    do                                                           \
+    {                                                            \
+        List_t *const pxConstList = (pxList);                    \
+        (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext; \
+    /* if 这一行写错了, xListEnd 是 List 内的成员, 不是 List 内的指针 */
+        if ((void *)((pxConstList)->pxIndex) == (void *)((pxConstList)->xListEnd))      \
+        {                                                                               \
+            /* 防止 index 索引到 root 内的 end 节点(没有 owner ), 因此加入了一次判断 */ \
+            (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext;                    \
+        }                                                                               \
+        (pxTCB) = (pxConstList)->pxIndex->pvOwner;                                      \
     } while (0);
+#else
+/*
+ * Access function to obtain the owner of the next entry in a list.
+ *
+ * The list member pxIndex is used to walk through a list.  Calling
+ * listGET_OWNER_OF_NEXT_ENTRY increments pxIndex to the next item in the list
+ * and returns that entry's pxOwner parameter.  Using multiple calls to this
+ * function it is therefore possible to move through every item contained in
+ * a list.
+ *
+ * The pxOwner parameter of a list item is a pointer to the object that owns
+ * the list item.  In the scheduler this is normally a task control block.
+ * The pxOwner parameter effectively creates a two way link between the list
+ * item and its owner.
+ *
+ * @param pxTCB pxTCB is set to the address of the owner of the next list item.
+ * @param pxList The list from which the next item owner is to be returned.
+ *
+ * \page listGET_OWNER_OF_NEXT_ENTRY listGET_OWNER_OF_NEXT_ENTRY
+ * \ingroup LinkedList
+ */
+#define listGET_OWNER_OF_NEXT_ENTRY(pxTCB, pxList)                                \
+    do                                                                            \
+    {                                                                             \
+        List_t *const pxConstList = (pxList);                                     \
+        /* Increment the index to the next item and return the item, ensuring */  \
+        /* we don't return the marker used at the end of the list.  */            \
+        (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext;                  \
+        if ((void *)(pxConstList)->pxIndex == (void *)&((pxConstList)->xListEnd)) \
+        {                                                                         \
+            (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext;              \
+        }                                                                         \
+        (pxTCB) = (pxConstList)->pxIndex->pvOwner;                                \
+    } while (0);
+#endif
 
 #endif // _LIST_H_

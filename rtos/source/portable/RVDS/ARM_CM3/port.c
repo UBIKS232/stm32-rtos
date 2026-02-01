@@ -58,8 +58,18 @@ void xTaskIncrementTick(void)
     for (i = 0; i < configMAX_PRIORITIES; i++)
     {
         pxTCB = (TCB_t *)listGET_OWNER_OF_HEAD_ENTRY(&(pxReadyTasksLists[i]));
+        if (listLIST_IS_EMPTY(&(pxReadyTasksLists[i])))
+            continue;
         if (pxTCB->xTicksToDelay > 0)
+        {
             pxTCB->xTicksToDelay--;
+
+            // 延时时间到, 将任务就绪
+            if(pxTCB->xTicksToDelay == 0)
+            {
+                taskRECORD_READY_PRIORITY(pxTCB->uxPriority);
+            }
+        }
     }
 
     portYIELD();
