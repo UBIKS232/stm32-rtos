@@ -3,6 +3,8 @@
 
 #include "portmacro.h"
 
+// #define DEBUG___
+
 // 配置成与硬件的系统时钟一样
 #define configCPU_CLOCK_HZ ((unsigned long)72000000)
 // SysTick 每秒中断多少次, 目前配置为 100, 即每 10ms 中断一次

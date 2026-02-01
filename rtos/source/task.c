@@ -16,6 +16,75 @@ static volatile UBaseType_t uxCurrentNumberOfTasks = 0UL;
 /******************************************************************************/
 
 /******************************************************************************/
+// 创建的任务的最高优先级
+UBaseType_t uxTopReadyPriority = tskIDLE_PRIORITY;
+// 查找最高优先级
+#if (configUSE_PORT_OPTIMISED_TASK_SELECTION == 0)
+// 通用方法
+#define taskRECORD_READY_PRIORITY(uxPriority)  \
+    do                                         \
+    {                                          \
+        if ((uxPriority) > uxTopReadyPriority) \
+        {                                      \
+            uxTopReadyPriority = (uxPriority); \
+        }                                      \
+    } while (0);
+
+#define taskSELECT_HIGHEST_PRIORITY_TASK()                                              \
+    do                                                                                  \
+    {                                                                                   \
+        UBaseType_t uxTopPriority = uxTopReadyPriority;                                 \
+        while (listLIST_IS_EMPTY(&(pxReadyTasksLists[uxTopPriority])))                  \
+        {                                                                               \
+            uxTopPriority--;                                                            \
+        }                                                                               \
+        listGET_OWNER_OF_NEXT_ENTRY(pxCurrentTCB, &(pxReadyTasksLists[uxTopPriority])); \
+        uxTopReadyPriority = uxTopPriority;                                             \
+    } while (0);
+
+#define taskRESET_READY_PRIORITY(uxPriority)
+
+#define portRESET_READY_PRIORITY(uxPriorityt, uxTopReadyPriority)
+
+#else
+// 根据 Cortex-M3 优化后的方法
+#if defined(taskRECORD_READY_PRIORITY)
+#define taskRECORD_READY_PRIORITY(uxPriority) \
+    portRECORD_READY_PRIORITY(uxPriority, uxTopReadyPriority)
+#endif
+
+#define taskSELECT_HIGHEST_PRIORITY_TASK()                                              \
+    do                                                                                  \
+    {                                                                                   \
+        UBaseType_t uxTopPriority = 0UL;                                                \
+        if (uxTopReadyPriority != 0UL)                                                  \
+            portGET_HIGHEST_PRIORITY(uxTopPriority, uxTopReadyPriority);                \
+        listGET_OWNER_OF_NEXT_ENTRY(pxCurrentTCB, &(pxReadyTasksLists[uxTopPriority])); \
+        uxTopReadyPriority = uxTopPriority;                                             \
+    } while (0);
+
+#if 0
+#define taskRESET_READY_PRIORITY(uxPriority)                                                  \
+    do                                                                                        \
+    {                                                                                         \
+        if (listCURRENT_LIST_LENGTH(&(pxReadyTasksLists[(uxPriorityt)])) == (UBaseType_t)0UL) \
+        {                                                                                     \
+            portRESET_READY_PRIORITY((uxPrioritty), (uxTopReadyPriority));                    \
+        }                                                                                     \
+    } while (0);
+#else
+// 按照 uxPriority 将 uxReadyPriorities(uint32_t) 的某一位清零
+#define taskRESET_READY_PRIORITY(uxPriority)                      \
+    do                                                            \
+    {                                                             \
+        portRESET_READY_PRIORITY(uxPriority, uxTopReadyPriority); \
+    } while (0);
+#endif
+
+#endif
+/******************************************************************************/
+
+/******************************************************************************/
 /**
  * @brief 私有函数, 就序列表初始化
  */
@@ -323,8 +392,31 @@ void vTaskSwitchContext(void)
 /**
  * @brief 上下文切换, 更新pxCurrentTCB
  */
-void vTaskSwitchContext(void){
+void vTaskSwitchContext(void)
+{
+#ifndef DEBUG___
     taskSELECT_HIGHEST_PRIORITY_TASK();
+#else
+    do
+    {
+        UBaseType_t uxTopPriority = 0UL;
+        if (uxTopReadyPriority != 0UL)
+            // portGET_HIGHEST_PRIORITY(uxTopPriority, uxTopReadyPriority);
+            uxTopPriority = (31UL - (uint32_t)__clz(uxTopReadyPriority));
+        // listGET_OWNER_OF_NEXT_ENTRY(pxCurrentTCB, &(pxReadyTasksLists[uxTopPriority]));
+        do
+        {
+            List_t *const pxConstList = &(pxReadyTasksLists[uxTopPriority]);
+            (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext;
+            if ((void *)(pxConstList)->pxIndex == (void *)&((pxConstList)->xListEnd))
+            {
+                (pxConstList)->pxIndex = (pxConstList)->pxIndex->pxNext;
+            }
+            pxCurrentTCB = (pxConstList)->pxIndex->pvOwner;
+        } while (0);
+        uxTopReadyPriority = uxTopPriority;
+    } while (0);
+#endif
 }
 #endif
 /******************************************************************************/

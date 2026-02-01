@@ -130,7 +130,7 @@ static portFORCE_INLINE void vPortSetBASEPRI(uint32_t ulBASEPRI)
 /******************************************************************************/
 // 将 uxPriority 标记到 uxReadyPriorities(uint32_t) 的某一位上
 #define portRECORD_READY_PRIORITY(uxPriority, uxReadyPriorities) \
-    (uxReadyPriorities) = (1UL << (uxPriority))
+    (uxReadyPriorities) |= (1UL << (uxPriority))
 // 按照 uxPriority 将 uxReadyPriorities(uint32_t) 的某一位清零
 #define portRESET_READY_PRIORITY(uxPriority, uxReadyPriorities) \
     (uxReadyPriorities) &= ~(1UL << (uxPriority))

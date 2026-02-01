@@ -35,7 +35,9 @@ int main(void)
     // 如果把就绪列表比作是晾衣架, 任务是衣服,
     // 那 xStateListItem 就是晾衣架上面的钩子,
     // 每个任务都自带晾衣架钩子, 就是为了把自己挂在各种不同的链表中
+#if 0
     prvInitialiseTaskLists();
+#endif
     Task1_Handle = xTaskCreateStatic((TaskFuntion_t)Task1_Entry,
                                      (char *)"Task1",
                                      (uint32_t)TASK1_STACK_SIZE,
