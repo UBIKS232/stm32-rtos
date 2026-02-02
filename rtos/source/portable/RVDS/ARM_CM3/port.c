@@ -86,7 +86,7 @@ void xTaskIncrementTick(void)
     }
 
     // 有任务延时到期
-    if(xTickCount >= xNextTaskUnblockTime)
+    if(xConstTickCount >= xNextTaskUnblockTime)
     {
         for(;;)
         {

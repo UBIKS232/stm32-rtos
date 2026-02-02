@@ -176,7 +176,7 @@ static void prvAddCurrentTaskToDelayedList(TickType_t xTicksToWait)
     }
 
     // 计算任务延时到期时, 系统时基计数器 xTickCount 的值是多少
-    xTimeToWake = xTickCount + xTicksToWait;
+    xTimeToWake = xConstTickCount + xTicksToWait;
 
     // 将延时到期的值设置为节点的排序值
     listSET_LIST_ITEM_VALUE(&(pxCurrentTCB->xStateListItem), xTimeToWake);

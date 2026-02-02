@@ -52,10 +52,10 @@ int main(void)
                                      (UBaseType_t)2,
                                      (StackType_t *)Task2Stack,
                                      (TCB_t *)&Task2TCB);
-    vListInsertEnd(&(pxReadyTasksLists[1]),
-                   &(((TCB_t *)(&Task1TCB))->xStateListItem));
-    vListInsertEnd(&(pxReadyTasksLists[2]),
-                   &(((TCB_t *)(&Task2TCB))->xStateListItem));
+    // vListInsertEnd(&(pxReadyTasksLists[1]),
+    //                &(((TCB_t *)(&Task1TCB))->xStateListItem));
+    // vListInsertEnd(&(pxReadyTasksLists[2]),
+    //                &(((TCB_t *)(&Task2TCB))->xStateListItem));
 
     vTaskStartScheduler();
 
