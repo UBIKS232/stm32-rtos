@@ -47,6 +47,7 @@ void vListInitialiseItem(ListItem_t *const pxListItem);
 void vListInitialise(List_t *const pxList);
 void vListInsertEnd(List_t *const pxLis, ListItem_t *const pxNewListItem);
 void vListInsert(List_t *const pxLis, ListItem_t *const pxNewListItem);
+UBaseType_t uxListRemove(ListItem_t *const pxItemToRemove);
 
 /**
  * 链表操作的宏
@@ -65,7 +66,7 @@ void vListInsert(List_t *const pxLis, ListItem_t *const pxNewListItem);
 
 // 获取节点排序辅助值
 #define listGET_LIST_ITEM_VALUE(pxListItem) \
-    ((pxListItem)->xItemValue)
+    ((pxListItem)->xStateListItem.xItemValue)
 
 // ??获取链表根节点的节点计数器的值
 #define listGET_ITEM_VALUE_OF_HEAD_ENTRY(pxList) \

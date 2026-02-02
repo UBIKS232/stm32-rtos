@@ -6,6 +6,8 @@
 // 临界段嵌套计数器, 默认初始化为 0xaaaaaaaa, 在调度器启动时会被重新初始化为 0 ：vTaskStartScheduler()->xPortStartScheduler()->uxCriticalNesting = 0
 static uint32_t uxCriticalNesting = 0xaaaaaaaa;
 
+extern List_t pxReadyTasksLists[configMAX_PRIORITIES];
+
 /******************************************************************************/
 // SysTick init
 // SysTick 控制寄存器
@@ -41,19 +43,23 @@ void vPortSetupTimerInterrupt(void)
 // 系统时基计时器
 TickType_t xTickCount = 0;
 
+extern TickType_t xNextTaskUnblockTime;
+extern List_t *pxDelayedTaskList;
+extern List_t *pxOverflowDelayedTaskList;
+
 /**
  * @brief 更新系统时基
  */
 void xTaskIncrementTick(void)
 {
-    extern List_t pxReadyTasksLists[configMAX_PRIORITIES];
-
     TCB_t *pxTCB = NULL;
-    BaseType_t i = 0;
+    // BaseType_t i = 0;
+    TickType_t xItemValue = 0;
 
     const TickType_t xConstTickCount = xTickCount + 1;
     xTickCount = xConstTickCount;
 
+#if 0
     // ??扫描就绪列表中每个链表中第一个任务的 xTicksToDelay, 如果不为 0, 则减 1
     for (i = 0; i < configMAX_PRIORITIES; i++)
     {
@@ -71,6 +77,47 @@ void xTaskIncrementTick(void)
             }
         }
     }
+#else
+
+    if(xConstTickCount == (TickType_t)0U)
+    {
+        // 如果系统时基计数器 xTickCount 溢出，则切换延时列表
+        taskSWITCH_DELAYED_LISTS();
+    }
+
+    // 有任务延时到期
+    if(xTickCount >= xNextTaskUnblockTime)
+    {
+        for(;;)
+        {
+            if(listLIST_IS_EMPTY(pxDelayedTaskList) != pdFALSE)
+            {
+                // 延时列表为空
+                xNextTaskUnblockTime = portMAX_DELAY;
+                break;
+            }
+            else
+            {
+                pxTCB = (TCB_t *)listGET_OWNER_OF_HEAD_ENTRY(pxDelayedTaskList);
+                xItemValue = listGET_LIST_ITEM_VALUE(pxTCB);
+
+                // 直到将延时列表中所有延时到期的任务移除才跳出 for 循环
+                if(xConstTickCount < xItemValue)
+                {
+                    xNextTaskUnblockTime = xItemValue;
+                    break;
+                }
+
+                // 将任务从延时列表移除, 消除等待状态
+                (void)uxListRemove(&(pxTCB->xStateListItem));
+
+                // 将解除等待的任务添加到就绪列表
+                prvAddTaskToReadyList(pxTCB);
+            }
+        }
+    }
+
+#endif
 
     portYIELD();
 }
